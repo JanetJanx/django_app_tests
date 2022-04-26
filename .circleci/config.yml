@@ -1,0 +1,41 @@
+version: 2.1
+orbs:
+  browser-tools: circleci/browser-tools@1.2.3
+workflows:
+  test:
+    jobs:
+      - build
+jobs:
+  build:
+    docker:
+    - image: cimg/python:3.10-browsers
+    steps:
+      - checkout
+      - browser-tools/install-browser-tools
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "requirements.ini" }}
+          - v1-dependencies-
+      - run:
+          name: install dependencies
+          command: |
+            pip install -r requirements.ini
+            echo $HOME
+
+      - save_cache:
+          paths:
+          - ./venv
+          key: v1-dependencies-{{ checksum "requirements.ini" }}
+
+      - run:
+          name: run tests
+          command: |
+            coverage run --source=. --omit='*tests*,*migrations*,*admin*' -m py.test -v --tb=native
+            coverage report
+            coverage html  # open htmlcov/index.html in a browser
+
+      # store artifacts (for example logs, binaries, etc)
+      # to be available in the web app or through the API
+      - store_artifacts:
+          path: test-reports
+      
